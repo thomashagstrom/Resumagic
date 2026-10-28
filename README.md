@@ -20,6 +20,18 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Social sign-in
+
+Job seekers sign in with Google or LinkedIn via [Auth.js](https://authjs.dev). Copy `.env.example` to `.env.local` and fill in:
+
+- `AUTH_SECRET` — required in production, signs session tokens.
+- `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` — Google OAuth app credentials.
+- `AUTH_LINKEDIN_ID` / `AUTH_LINKEDIN_SECRET` — LinkedIn OAuth app credentials.
+
+These are all read at request time (by the auth route handler and middleware), so updating them on a running deployment takes effect without a rebuild.
+
+A signed-in user's CV/portfolio is currently kept in an in-memory, per-process store (`lib/portfolio-store.ts`), keyed by user id, so each user only ever sees their own data and it's gone after a restart. This is a placeholder until a real database is provisioned for the project.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
