@@ -1,0 +1,15 @@
+
+> resumagic@0.1.0 test
+> vitest run lib/portfolio-store.test.ts lib/route-guard.test.ts
+
+
+ RUN  v3.2.7 /tmp/aiteam-workspace-XllCPZ
+
+ ✓ lib/route-guard.test.ts (3 tests) 3ms
+ ✓ lib/portfolio-store.test.ts (4 tests) 4ms
+
+ Test Files  2 passed (2)
+      Tests  7 passed (7)
+   Start at  11:36:35
+   Duration  554ms (transform 174ms, setup 0ms, collect 174ms, tests 7ms, environment 0ms, prepare 380ms)
+
