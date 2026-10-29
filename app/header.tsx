@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { auth, signOut } from "@/lib/auth";
+import { HeaderNav } from "./header-nav";
 
 export function Header() {
   return (
@@ -8,9 +9,12 @@ export function Header() {
       <Link href="/" className="font-semibold text-black dark:text-zinc-50">
         Resumagic
       </Link>
-      <Suspense fallback={null}>
-        <AuthState />
-      </Suspense>
+      <div className="flex items-center gap-6">
+        <HeaderNav />
+        <Suspense fallback={null}>
+          <AuthState />
+        </Suspense>
+      </div>
     </header>
   );
 }
