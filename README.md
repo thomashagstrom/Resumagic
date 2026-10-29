@@ -24,7 +24,7 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 Job seekers sign in with Google through Firebase Authentication (`components/SignIn.tsx`). No server secrets are needed. `/dashboard` is protected client-side by `components/AuthGate.tsx`, and the header (`app/header.tsx`) shows sign in or sign out from the Firebase user.
 
-A signed-in user's CV/portfolio is currently kept in an in-memory store (`lib/portfolio-store.ts`), keyed by the Firebase user id (`uid`). It is not persisted: it is gone on reload. This is a placeholder until portfolios are saved to Firestore.
+A signed-in user's CV/portfolio is stored in Firestore (`lib/portfolio-store.ts`) at `notes/{uid}`, with a `uid` field set to the Firebase user id. `firestore.rules` lets each person read and write only documents whose `uid` is their own. The dashboard only reads it; nothing in the app saves a portfolio yet.
 
 ## Learn More
 

@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import AuthGate from "@/components/AuthGate";
-import { getPortfolioForUser } from "@/lib/portfolio-store";
+import { getPortfolioForUser, type Portfolio } from "@/lib/portfolio-store";
 
 export default function DashboardPage() {
   return (
@@ -11,16 +12,35 @@ export default function DashboardPage() {
           My CV &amp; portfolio
         </h1>
         <div className="mt-8 text-black dark:text-zinc-50">
-          <AuthGate>{(user) => <DashboardContent userId={user.uid} />}</AuthGate>
+          <AuthGate>{(user) => <SavedPortfolio userId={user.uid} />}</AuthGate>
         </div>
       </div>
     </div>
   );
 }
 
-export function DashboardContent({ userId }: { userId: string }) {
-  const portfolio = getPortfolioForUser(userId);
+function SavedPortfolio({ userId }: { userId: string }) {
+  const [portfolio, setPortfolio] = useState<Portfolio | null | undefined>(undefined);
 
+  useEffect(() => {
+    let cancelled = false;
+    getPortfolioForUser(userId)
+      .then((found) => {
+        if (!cancelled) setPortfolio(found);
+      })
+      .catch(() => {
+        if (!cancelled) setPortfolio(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  if (portfolio === undefined) return <p>Loading…</p>;
+  return <DashboardContent portfolio={portfolio} />;
+}
+
+export function DashboardContent({ portfolio }: { portfolio: Portfolio | null }) {
   if (!portfolio) {
     return (
       <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-black/[.12] py-16 text-center dark:border-white/[.18]">

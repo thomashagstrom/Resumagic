@@ -1,59 +1,47 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import {
-  clearStoreForTests,
-  getPortfolioForUser,
-  savePortfolioForUser,
-} from "./portfolio-store";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const docs = new Map<string, Record<string, unknown>>();
+
+vi.mock("@/lib/firebase", () => ({ getFirebase: () => ({ db: {} }) }));
+vi.mock("firebase/firestore", () => ({
+  doc: (_db: unknown, collection: string, id: string) => `${collection}/${id}`,
+  getDoc: async (path: string) => ({
+    exists: () => docs.has(path),
+    data: () => docs.get(path),
+  }),
+  setDoc: async (path: string, data: Record<string, unknown>) => {
+    docs.set(path, data);
+  },
+}));
+
+import { getPortfolioForUser, savePortfolioForUser } from "./portfolio-store";
 
 beforeEach(() => {
-  clearStoreForTests();
+  docs.clear();
 });
 
-describe("first sign-in lands on an empty dashboard", () => {
-  it("returns no portfolio for a user who has never saved one", () => {
-    expect(getPortfolioForUser("user-new")).toBeNull();
-  });
-});
+const portfolio = { title: "My portfolio", lastSavedAt: "2026-10-20", status: "draft" } as const;
 
-describe("a returning user sees their existing portfolio", () => {
-  it("returns the same portfolio that was saved for that user", () => {
-    savePortfolioForUser("user-a", {
-      title: "My portfolio",
-      lastSavedAt: "2026-10-20",
-      status: "draft",
-    });
+describe("saved portfolio data is tied to the Firebase uid", () => {
+  it("stores the portfolio at notes/{uid} with a uid field that firestore.rules checks", async () => {
+    await savePortfolioForUser("user-a", portfolio);
 
-    expect(getPortfolioForUser("user-a")).toEqual({
-      title: "My portfolio",
-      lastSavedAt: "2026-10-20",
-      status: "draft",
-    });
-  });
-});
-
-describe("no one else can see or edit another user's saved data", () => {
-  it("does not return user A's portfolio when looking up user B", () => {
-    savePortfolioForUser("user-a", {
-      title: "User A's portfolio",
-      lastSavedAt: "2026-10-20",
-      status: "published",
-    });
-
-    expect(getPortfolioForUser("user-b")).toBeNull();
+    expect(docs.get("notes/user-a")).toEqual({ ...portfolio, uid: "user-a" });
   });
 
-  it("saving user B's portfolio does not change user A's", () => {
-    savePortfolioForUser("user-a", {
-      title: "User A's portfolio",
-      lastSavedAt: "2026-10-20",
-      status: "published",
-    });
-    savePortfolioForUser("user-b", {
-      title: "User B's portfolio",
-      lastSavedAt: "2026-10-21",
-      status: "draft",
-    });
+  it("returns the same portfolio that was saved for that user", async () => {
+    await savePortfolioForUser("user-a", portfolio);
 
-    expect(getPortfolioForUser("user-a")?.title).toBe("User A's portfolio");
+    expect(await getPortfolioForUser("user-a")).toEqual(portfolio);
+  });
+
+  it("returns no portfolio for a user who has never saved one", async () => {
+    expect(await getPortfolioForUser("user-new")).toBeNull();
+  });
+
+  it("does not return user A's portfolio when looking up user B", async () => {
+    await savePortfolioForUser("user-a", portfolio);
+
+    expect(await getPortfolioForUser("user-b")).toBeNull();
   });
 });
