@@ -7,3 +7,24 @@ runConfig:
   memoryMiB: 512
   minInstances: 0
   maxInstances: 2
+env:
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: AIzaSyD_7JBmewmweB_b5LejFoD0V7HHvDUFFUQ
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: resumagic-mlin6.firebaseapp.com
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: resumagic-mlin6
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: 1:261917967367:web:841933e6bebdda248556a2
+    availability:
+      - BUILD
+      - RUNTIME
