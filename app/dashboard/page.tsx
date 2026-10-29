@@ -1,5 +1,6 @@
-import { Suspense } from "react";
-import { auth } from "@/lib/auth";
+"use client";
+
+import AuthGate from "@/components/AuthGate";
 import { getPortfolioForUser } from "@/lib/portfolio-store";
 
 export default function DashboardPage() {
@@ -9,28 +10,20 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">
           My CV &amp; portfolio
         </h1>
-        <Suspense fallback={<DashboardFallback />}>
-          <DashboardContent />
-        </Suspense>
+        <div className="mt-8 text-black dark:text-zinc-50">
+          <AuthGate>{(user) => <DashboardContent userId={user.uid} />}</AuthGate>
+        </div>
       </div>
     </div>
   );
 }
 
-function DashboardFallback() {
-  return (
-    <div className="mt-8 h-40 animate-pulse rounded-2xl bg-black/[.04] dark:bg-white/[.06]" />
-  );
-}
-
-async function DashboardContent() {
-  const session = await auth();
-  const userId = session?.user?.id;
-  const portfolio = userId ? getPortfolioForUser(userId) : null;
+export function DashboardContent({ userId }: { userId: string }) {
+  const portfolio = getPortfolioForUser(userId);
 
   if (!portfolio) {
     return (
-      <div className="mt-8 flex flex-col items-center gap-4 rounded-2xl border border-dashed border-black/[.12] py-16 text-center dark:border-white/[.18]">
+      <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-black/[.12] py-16 text-center dark:border-white/[.18]">
         <p className="text-lg font-medium text-black dark:text-zinc-50">
           Nothing saved yet
         </p>
@@ -45,7 +38,7 @@ async function DashboardContent() {
   }
 
   return (
-    <div className="mt-8 rounded-2xl border border-black/[.08] bg-white p-6 dark:border-white/[.145] dark:bg-zinc-950">
+    <div className="rounded-2xl border border-black/[.08] bg-white p-6 dark:border-white/[.145] dark:bg-zinc-950">
       <h2 className="font-medium text-black dark:text-zinc-50">
         {portfolio.title}
       </h2>
