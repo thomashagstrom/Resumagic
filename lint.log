@@ -1,4 +1,0 @@
-
-> resumagic@0.1.0 lint
-> eslint lib/portfolio-store.ts lib/auth.ts lib/route-guard.ts middleware.ts app/signin/page.tsx app/dashboard/page.tsx app/header.tsx app/layout.tsx app/api/auth/[...nextauth]/route.ts vitest.config.ts lib/portfolio-store.test.ts lib/route-guard.test.ts
-
