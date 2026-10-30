@@ -1,24 +1,23 @@
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { getFirebase } from "@/lib/firebase";
+
 export type Portfolio = {
   title: string;
   lastSavedAt: string;
   status: "draft" | "published";
 };
 
-/**
- * In-memory, per-process store keyed by user id. Good enough to prove the
- * "returning user sees their own data, no one else's" behaviour for this
- * story; swap for a real database once one is provisioned for the project.
- */
-const portfoliosByUserId = new Map<string, Portfolio>();
+// One document per person at notes/{uid}, carrying a `uid` field so that
+// firestore.rules lets only that person read and write it.
+const COLLECTION = "notes";
 
-export function getPortfolioForUser(userId: string): Portfolio | null {
-  return portfoliosByUserId.get(userId) ?? null;
+export async function getPortfolioForUser(userId: string): Promise<Portfolio | null> {
+  const snapshot = await getDoc(doc(getFirebase().db, COLLECTION, userId));
+  if (!snapshot.exists()) return null;
+  const { title, lastSavedAt, status } = snapshot.data() as Portfolio;
+  return { title, lastSavedAt, status };
 }
 
-export function savePortfolioForUser(userId: string, portfolio: Portfolio): void {
-  portfoliosByUserId.set(userId, portfolio);
-}
-
-export function clearStoreForTests(): void {
-  portfoliosByUserId.clear();
+export async function savePortfolioForUser(userId: string, portfolio: Portfolio): Promise<void> {
+  await setDoc(doc(getFirebase().db, COLLECTION, userId), { ...portfolio, uid: userId });
 }

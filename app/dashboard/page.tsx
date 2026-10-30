@@ -1,6 +1,8 @@
-import { Suspense } from "react";
-import { auth } from "@/lib/auth";
-import { getPortfolioForUser } from "@/lib/portfolio-store";
+"use client";
+
+import { useEffect, useState } from "react";
+import AuthGate from "@/components/AuthGate";
+import { getPortfolioForUser, type Portfolio } from "@/lib/portfolio-store";
 
 export default function DashboardPage() {
   return (
@@ -9,28 +11,39 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">
           My CV &amp; portfolio
         </h1>
-        <Suspense fallback={<DashboardFallback />}>
-          <DashboardContent />
-        </Suspense>
+        <div className="mt-8 text-black dark:text-zinc-50">
+          <AuthGate>{(user) => <SavedPortfolio userId={user.uid} />}</AuthGate>
+        </div>
       </div>
     </div>
   );
 }
 
-function DashboardFallback() {
-  return (
-    <div className="mt-8 h-40 animate-pulse rounded-2xl bg-black/[.04] dark:bg-white/[.06]" />
-  );
+function SavedPortfolio({ userId }: { userId: string }) {
+  const [portfolio, setPortfolio] = useState<Portfolio | null | undefined>(undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPortfolioForUser(userId)
+      .then((found) => {
+        if (!cancelled) setPortfolio(found);
+      })
+      .catch(() => {
+        if (!cancelled) setPortfolio(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  if (portfolio === undefined) return <p>Loading…</p>;
+  return <DashboardContent portfolio={portfolio} />;
 }
 
-async function DashboardContent() {
-  const session = await auth();
-  const userId = session?.user?.id;
-  const portfolio = userId ? getPortfolioForUser(userId) : null;
-
+export function DashboardContent({ portfolio }: { portfolio: Portfolio | null }) {
   if (!portfolio) {
     return (
-      <div className="mt-8 flex flex-col items-center gap-4 rounded-2xl border border-dashed border-black/[.12] py-16 text-center dark:border-white/[.18]">
+      <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-black/[.12] py-16 text-center dark:border-white/[.18]">
         <p className="text-lg font-medium text-black dark:text-zinc-50">
           Nothing saved yet
         </p>
@@ -45,7 +58,7 @@ async function DashboardContent() {
   }
 
   return (
-    <div className="mt-8 rounded-2xl border border-black/[.08] bg-white p-6 dark:border-white/[.145] dark:bg-zinc-950">
+    <div className="rounded-2xl border border-black/[.08] bg-white p-6 dark:border-white/[.145] dark:bg-zinc-950">
       <h2 className="font-medium text-black dark:text-zinc-50">
         {portfolio.title}
       </h2>

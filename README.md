@@ -22,15 +22,9 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 ## Social sign-in
 
-Job seekers sign in with Google or LinkedIn via [Auth.js](https://authjs.dev). Copy `.env.example` to `.env.local` and fill in:
+Job seekers sign in with Google through Firebase Authentication (`components/SignIn.tsx`). No server secrets are needed. `/dashboard` is protected client-side by `components/AuthGate.tsx`, and the header (`app/header.tsx`) shows sign in or sign out from the Firebase user.
 
-- `AUTH_SECRET` — required in production, signs session tokens.
-- `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` — Google OAuth app credentials.
-- `AUTH_LINKEDIN_ID` / `AUTH_LINKEDIN_SECRET` — LinkedIn OAuth app credentials.
-
-These are all read at request time (by the auth route handler and middleware), so updating them on a running deployment takes effect without a rebuild.
-
-A signed-in user's CV/portfolio is currently kept in an in-memory, per-process store (`lib/portfolio-store.ts`), keyed by user id, so each user only ever sees their own data and it's gone after a restart. This is a placeholder until a real database is provisioned for the project.
+A signed-in user's CV/portfolio is stored in Firestore (`lib/portfolio-store.ts`) at `notes/{uid}`, with a `uid` field set to the Firebase user id. `firestore.rules` lets each person read and write only documents whose `uid` is their own. The dashboard only reads it; nothing in the app saves a portfolio yet.
 
 ## Learn More
 
@@ -41,11 +35,9 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## Deploy on Firebase App Hosting
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This app goes live on Firebase App Hosting: every change merged to `main` is built and published by itself.
 
 ## Firebase
 

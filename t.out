@@ -1,0 +1,13 @@
+npm notice run resumagic@0.1.0 test
+npm notice run vitest run lib/portfolio-store.test.ts app/dashboard/page.test.tsx
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90m/private/var/folders/7g/4ms7_cbx0zd19hqzt6ww_jx80000gn/T/aiteam-workspace-RN66Ye[39m
+
+ [32m✓[39m lib/portfolio-store.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 1[2mms[22m[39m
+ [32m✓[39m app/dashboard/page.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[32m8 passed[39m[22m[90m (8)[39m
+[2m   Start at [22m 21:37:17
+[2m   Duration [22m 272ms[2m (transform 48ms, setup 0ms, collect 88ms, tests 7ms, environment 0ms, prepare 73ms)[22m
+
