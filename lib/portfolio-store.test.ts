@@ -35,6 +35,13 @@ describe("saved portfolio data is tied to the Firebase uid", () => {
     expect(await getPortfolioForUser("user-a")).toEqual(portfolio);
   });
 
+  it("keeps the extracted CV draft after a reload, unchanged", async () => {
+    const cv = { name: "Ada", headline: "Engineer", experience: ["A"], education: ["B"], skills: ["C"] };
+    await savePortfolioForUser("user-a", { ...portfolio, cv });
+
+    expect((await getPortfolioForUser("user-a"))?.cv).toEqual(cv);
+  });
+
   it("returns no portfolio for a user who has never saved one", async () => {
     expect(await getPortfolioForUser("user-new")).toBeNull();
   });
