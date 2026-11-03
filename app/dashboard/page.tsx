@@ -3,10 +3,16 @@
 import { useEffect, useState } from "react";
 import AuthGate from "@/components/AuthGate";
 import {
+  addListEntry,
   CV_SECTIONS,
   extractCvText,
+  HEADLINE_MAX,
   missingSections,
   parseCvText,
+  removeListEntry,
+  updateCvText,
+  updateListEntry,
+  updateSkillsText,
   validateCvFile,
   type CvDraft,
 } from "@/lib/cv-extract";
@@ -70,7 +76,20 @@ export function DashboardContent({
         <p className="text-lg font-medium text-black dark:text-zinc-50">Nothing saved yet</p>
       )}
       <CvUpload userId={userId} portfolio={portfolio} onChange={onChange} />
-      {portfolio?.cv && <CvSections cv={portfolio.cv} />}
+      {portfolio?.cv && (
+        <CvSections
+          cv={portfolio.cv}
+          onChange={(nextCv) => {
+            const next: Portfolio = {
+              ...portfolio,
+              cv: nextCv,
+              lastSavedAt: new Date().toISOString().slice(0, 10),
+            };
+            onChange?.(next);
+            if (userId) void savePortfolioForUser(userId, next);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -144,7 +163,10 @@ function CvUpload({
   );
 }
 
-export function CvSections({ cv }: { cv: CvDraft }) {
+const fieldClassName =
+  "mt-1 w-full rounded-lg border border-black/[.12] bg-transparent p-2 text-sm text-black dark:border-white/[.18] dark:text-zinc-50";
+
+export function CvSections({ cv, onChange }: { cv: CvDraft; onChange: (cv: CvDraft) => void }) {
   const missing = missingSections(cv);
   return (
     <div className="flex flex-col gap-4">
@@ -153,27 +175,68 @@ export function CvSections({ cv }: { cv: CvDraft }) {
           Please fill in: {missing.map((key) => CV_SECTIONS.find((s) => s.key === key)!.label).join(", ")}.
         </p>
       )}
-      {CV_SECTIONS.map(({ key, label }) => {
-        const value = cv[key];
-        const items = Array.isArray(value) ? value : value ? [value] : [];
+      <section className="rounded-2xl border border-black/[.08] bg-white p-6 dark:border-white/[.145] dark:bg-zinc-950">
+        <h3 className="font-medium text-black dark:text-zinc-50">Name</h3>
+        <input
+          className={fieldClassName}
+          value={cv.name}
+          onChange={(event) => onChange(updateCvText(cv, "name", event.target.value))}
+        />
+      </section>
+      <section className="rounded-2xl border border-black/[.08] bg-white p-6 dark:border-white/[.145] dark:bg-zinc-950">
+        <h3 className="font-medium text-black dark:text-zinc-50">Headline</h3>
+        <input
+          className={fieldClassName}
+          value={cv.headline}
+          maxLength={HEADLINE_MAX}
+          onChange={(event) => onChange(updateCvText(cv, "headline", event.target.value))}
+        />
+      </section>
+      {(["experience", "education"] as const).map((key) => {
+        const label = CV_SECTIONS.find((s) => s.key === key)!.label;
         return (
           <section
             key={key}
             className="rounded-2xl border border-black/[.08] bg-white p-6 dark:border-white/[.145] dark:bg-zinc-950"
           >
             <h3 className="font-medium text-black dark:text-zinc-50">{label}</h3>
-            {items.length === 0 ? (
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Needs filling in</p>
-            ) : (
-              <ul className="mt-1 list-disc pl-5 text-sm text-zinc-800 dark:text-zinc-200">
-                {items.map((item, index) => (
-                  <li key={index}>{item}</li>
-                ))}
-              </ul>
-            )}
+            <div className="mt-1 flex flex-col gap-2">
+              {cv[key].map((entry, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <input
+                    className={fieldClassName}
+                    value={entry}
+                    onChange={(event) => onChange(updateListEntry(cv, key, index, event.target.value))}
+                  />
+                  <button
+                    type="button"
+                    aria-label={`Delete ${label.toLowerCase()} entry`}
+                    className="text-sm text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50"
+                    onClick={() => onChange(removeListEntry(cv, key, index))}
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="mt-2 text-sm font-medium text-black underline dark:text-zinc-50"
+              onClick={() => onChange(addListEntry(cv, key))}
+            >
+              Add {label.toLowerCase()} entry
+            </button>
           </section>
         );
       })}
+      <section className="rounded-2xl border border-black/[.08] bg-white p-6 dark:border-white/[.145] dark:bg-zinc-950">
+        <h3 className="font-medium text-black dark:text-zinc-50">Skills</h3>
+        <input
+          className={fieldClassName}
+          value={cv.skills.join(", ")}
+          onChange={(event) => onChange(updateSkillsText(cv, event.target.value))}
+        />
+      </section>
     </div>
   );
 }

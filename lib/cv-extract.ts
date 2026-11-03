@@ -74,6 +74,42 @@ export function parseCvText(text: string): CvDraft {
   return draft;
 }
 
+export const HEADLINE_MAX = 60;
+
+export function clampHeadline(value: string): string {
+  return value.slice(0, HEADLINE_MAX);
+}
+
+export function updateCvText(draft: CvDraft, key: "name" | "headline", value: string): CvDraft {
+  return { ...draft, [key]: key === "headline" ? clampHeadline(value) : value };
+}
+
+export function updateListEntry(
+  draft: CvDraft,
+  key: "experience" | "education",
+  index: number,
+  value: string,
+): CvDraft {
+  const list = draft[key].slice();
+  list[index] = value;
+  return { ...draft, [key]: list };
+}
+
+export function addListEntry(draft: CvDraft, key: "experience" | "education"): CvDraft {
+  return { ...draft, [key]: [...draft[key], ""] };
+}
+
+export function removeListEntry(draft: CvDraft, key: "experience" | "education", index: number): CvDraft {
+  return { ...draft, [key]: draft[key].filter((_, i) => i !== index) };
+}
+
+export function updateSkillsText(draft: CvDraft, value: string): CvDraft {
+  return {
+    ...draft,
+    skills: value.split(",").map((s) => s.trim()).filter(Boolean),
+  };
+}
+
 export function missingSections(draft: CvDraft): CvSection[] {
   return CV_SECTIONS.filter(({ key }) => {
     const value = draft[key];
