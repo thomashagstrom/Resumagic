@@ -14,6 +14,7 @@ vi.mock("@/lib/portfolio-store", () => ({
 }));
 
 import DashboardPage, { CvSections, DashboardContent } from "./page";
+import type { CvDraft } from "@/lib/cv-extract";
 
 type ElementNode = { type: unknown; props: Record<string, unknown> };
 
@@ -147,7 +148,7 @@ describe("the user can add or delete an experience or education entry", () => {
       (node) => node.type === "button" && node.props?.["aria-label"] === "Delete education entry",
     );
 
-    deleteButtons[0].props.onClick();
+    (deleteButtons[0].props.onClick as () => void)();
 
     expect(onChange).toHaveBeenCalledWith({ ...cv, education: ["Open University"] });
   });
@@ -160,7 +161,7 @@ describe("edits are saved to the draft and appear in the preview without a manua
     const tree = DashboardContent({ portfolio, userId: "u1", onChange: onPortfolioChange });
     const [cvSectionsElement] = findAll(tree, (node) => node.type === CvSections);
 
-    cvSectionsElement.props.onChange({ ...cv, name: "Grace" });
+    (cvSectionsElement.props.onChange as (cv: CvDraft) => void)({ ...cv, name: "Grace" });
 
     expect(onPortfolioChange).toHaveBeenCalledWith(expect.objectContaining({ cv: { ...cv, name: "Grace" } }));
     expect(savePortfolioForUser).toHaveBeenCalledWith("u1", expect.objectContaining({ cv: { ...cv, name: "Grace" } }));
