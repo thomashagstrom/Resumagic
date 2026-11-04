@@ -87,6 +87,16 @@ export async function unpublishPortfolio(userId: string, portfolio: Portfolio): 
   return next;
 }
 
+// Removes the CV and returns the saved portfolio. A published page needs a CV,
+// so it is taken offline first.
+export async function removeCv(userId: string, portfolio: Portfolio): Promise<Portfolio> {
+  const base = portfolio.status === "published" ? await unpublishPortfolio(userId, portfolio) : portfolio;
+  const next: Portfolio = { ...base, lastSavedAt: new Date().toISOString().slice(0, 10) };
+  delete next.cv;
+  await savePortfolioForUser(userId, next);
+  return next;
+}
+
 export async function getPublishedPortfolio(slug: string): Promise<PublishedPortfolio | null> {
   const snapshot = await getDoc(doc(getFirebase().db, PUBLISHED, slug));
   if (!snapshot.exists()) return null;

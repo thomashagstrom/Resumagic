@@ -13,9 +13,10 @@ vi.mock("@/lib/portfolio-store", () => ({
   savePortfolioForUser: (userId: string, portfolio: unknown) => savePortfolioForUser(userId, portfolio),
   publishPortfolio: vi.fn(),
   unpublishPortfolio: vi.fn(),
+  removeCv: vi.fn(),
 }));
 
-import DashboardPage, { CvSections, DashboardContent } from "./page";
+import DashboardPage, { CvSections, DashboardContent, RemoveCvPrompt } from "./page";
 import type { CvDraft } from "@/lib/cv-extract";
 
 type ElementNode = { type: unknown; props: Record<string, unknown> };
@@ -243,5 +244,41 @@ describe("edits are saved to the draft and appear in the preview without a manua
 
     expect(onPortfolioChange).toHaveBeenCalledWith(expect.objectContaining({ cv: { ...cv, name: "Grace" } }));
     expect(savePortfolioForUser).toHaveBeenCalledWith("u1", expect.objectContaining({ cv: { ...cv, name: "Grace" } }));
+  });
+});
+
+describe("a job seeker can remove their current CV", () => {
+  const portfolio = { title: "My CV", lastSavedAt: "2026-10-20", status: "draft" as const, cv };
+
+  it("shows a Remove CV button next to the CV, and none when there is no CV", () => {
+    expect(renderToStaticMarkup(<DashboardContent portfolio={portfolio} />)).toContain(">Remove CV<");
+    expect(renderToStaticMarkup(<DashboardContent portfolio={null} />)).not.toContain("Remove CV");
+  });
+
+  it("does not ask for confirmation until Remove CV is chosen", () => {
+    expect(renderToStaticMarkup(<DashboardContent portfolio={portfolio} />)).not.toContain("Remove your CV?");
+  });
+
+  it("asks 'Remove your CV?' with Cancel and Remove choices", () => {
+    const html = renderToStaticMarkup(
+      <RemoveCvPrompt busy={false} message={null} onCancel={() => {}} onRemove={() => {}} />,
+    );
+
+    expect(html).toContain("Remove your CV?");
+    expect(html).toContain(">Cancel<");
+    expect(html).toContain(">Remove<");
+  });
+
+  it("leaves the CV untouched when Cancel is chosen", () => {
+    const onCancel = vi.fn();
+    const onRemove = vi.fn();
+    const tree = RemoveCvPrompt({ busy: false, message: null, onCancel, onRemove });
+    const [cancel] = findAll(tree, (node) => node.type === "button" && node.props.children === "Cancel");
+
+    (cancel.props.onClick as () => void)();
+
+    expect(onCancel).toHaveBeenCalled();
+    expect(onRemove).not.toHaveBeenCalled();
+    expect(savePortfolioForUser).not.toHaveBeenCalled();
   });
 });
