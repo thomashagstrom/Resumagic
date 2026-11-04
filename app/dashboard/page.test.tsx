@@ -4,14 +4,39 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const useAuthUser = vi.fn();
 vi.mock("@/lib/use-auth-user", () => ({ useAuthUser: () => useAuthUser() }));
 vi.mock("@/lib/firebase", () => ({ getFirebase: () => ({ auth: {} }) }));
-vi.mock("@/lib/portfolio-store", () => ({ getPortfolioForUser: vi.fn(async () => null),
-  savePortfolioForUser: vi.fn(async () => {}),
+const savePortfolioForUser = vi.fn(async (userId: string, portfolio: unknown) => {
+  void userId;
+  void portfolio;
+});
+vi.mock("@/lib/portfolio-store", () => ({
+  getPortfolioForUser: vi.fn(async () => null),
+  savePortfolioForUser: (userId: string, portfolio: unknown) => savePortfolioForUser(userId, portfolio),
 }));
 
-import DashboardPage, { DashboardContent } from "./page";
+import DashboardPage, { CvSections, DashboardContent } from "./page";
+import type { CvDraft } from "@/lib/cv-extract";
+
+type ElementNode = { type: unknown; props: Record<string, unknown> };
+
+function findAll(
+  node: unknown,
+  predicate: (node: ElementNode) => boolean,
+  found: ElementNode[] = [],
+): ElementNode[] {
+  if (!node || typeof node !== "object") return found;
+  if (Array.isArray(node)) {
+    node.forEach((child) => findAll(child, predicate, found));
+    return found;
+  }
+  const element = node as ElementNode;
+  if (predicate(element)) found.push(element);
+  findAll(element.props?.children, predicate, found);
+  return found;
+}
 
 beforeEach(() => {
   useAuthUser.mockReset();
+  savePortfolioForUser.mockClear();
 });
 
 describe("signed-out visitors to the dashboard are asked to sign in", () => {
@@ -71,5 +96,74 @@ describe("signed-in visitors reach the dashboard", () => {
 
   it("shows the empty state when nothing is saved", () => {
     expect(renderToStaticMarkup(<DashboardContent portfolio={null} />)).toContain("Nothing saved yet");
+  });
+});
+
+const cv = {
+  name: "Ada",
+  headline: "Engineer",
+  experience: ["Analytical Engines Ltd"],
+  education: ["University of London"],
+  skills: ["TypeScript"],
+};
+
+describe("each extracted section can be edited inline", () => {
+  it("renders an editable input carrying each section's current value", () => {
+    const html = renderToStaticMarkup(<CvSections cv={cv} onChange={() => {}} />);
+
+    expect(html).toContain('value="Ada"');
+    expect(html).toContain('value="Engineer"');
+    expect(html).toContain('value="Analytical Engines Ltd"');
+    expect(html).toContain('value="University of London"');
+    expect(html).toContain('value="TypeScript"');
+  });
+
+  it("limits the headline input to 60 characters", () => {
+    const html = renderToStaticMarkup(<CvSections cv={cv} onChange={() => {}} />);
+
+    expect(html).toMatch(/value="Engineer"[^>]*maxLength="60"|maxLength="60"[^>]*value="Engineer"/);
+  });
+
+  it("never shows a manual save button next to the editable sections", () => {
+    const html = renderToStaticMarkup(<CvSections cv={cv} onChange={() => {}} />);
+
+    expect(html.toLowerCase()).not.toContain(">save<");
+  });
+});
+
+describe("the user can add or delete an experience or education entry", () => {
+  it("offers an add-entry control for experience and for education", () => {
+    const html = renderToStaticMarkup(<CvSections cv={cv} onChange={() => {}} />);
+
+    expect(html).toContain("Add experience entry");
+    expect(html).toContain("Add education entry");
+  });
+
+  it("deletes an education entry and keeps the rest when its delete control is used", () => {
+    const twoEducation = { ...cv, education: ["University of London", "Open University"] };
+    const onChange = vi.fn();
+    const tree = CvSections({ cv: twoEducation, onChange });
+    const deleteButtons = findAll(
+      tree,
+      (node) => node.type === "button" && node.props?.["aria-label"] === "Delete education entry",
+    );
+
+    (deleteButtons[0].props.onClick as () => void)();
+
+    expect(onChange).toHaveBeenCalledWith({ ...cv, education: ["Open University"] });
+  });
+});
+
+describe("edits are saved to the draft and appear in the preview without a manual save step", () => {
+  it("updates the preview and saves the draft as soon as a field changes", () => {
+    const onPortfolioChange = vi.fn();
+    const portfolio = { title: "My CV", lastSavedAt: "2026-10-20", status: "draft" as const, cv };
+    const tree = DashboardContent({ portfolio, userId: "u1", onChange: onPortfolioChange });
+    const [cvSectionsElement] = findAll(tree, (node) => node.type === CvSections);
+
+    (cvSectionsElement.props.onChange as (cv: CvDraft) => void)({ ...cv, name: "Grace" });
+
+    expect(onPortfolioChange).toHaveBeenCalledWith(expect.objectContaining({ cv: { ...cv, name: "Grace" } }));
+    expect(savePortfolioForUser).toHaveBeenCalledWith("u1", expect.objectContaining({ cv: { ...cv, name: "Grace" } }));
   });
 });
