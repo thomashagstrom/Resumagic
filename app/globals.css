@@ -80,6 +80,41 @@ a {
   box-shadow: calc(var(--tilt-x, 0) * -12px) calc(var(--tilt-y, 0) * -12px) 28px var(--glow);
 }
 
+/* Shared button styles: one palette (accent / foreground) for every screen. */
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.75rem;
+  padding: 0 1.5rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.btn-secondary {
+  border: 1px solid var(--muted);
+  color: var(--foreground);
+}
+
+.btn-primary:hover:not(:disabled),
+.btn-secondary:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  opacity: 0.6;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -43,6 +43,8 @@ export default function DashboardPage() {
 
 function SavedPortfolio({ userId }: { userId: string }) {
   const [portfolio, setPortfolio] = useState<Portfolio | null | undefined>(undefined);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,15 +53,61 @@ function SavedPortfolio({ userId }: { userId: string }) {
         if (!cancelled) setPortfolio(found);
       })
       .catch(() => {
-        if (!cancelled) setPortfolio(null);
+        if (!cancelled) setFailed(true);
       });
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, attempt]);
 
-  if (portfolio === undefined) return <p>Loading…</p>;
+  if (failed) {
+    return (
+      <LoadError
+        onRetry={() => {
+          setFailed(false);
+          setAttempt((n) => n + 1);
+        }}
+      />
+    );
+  }
+  if (portfolio === undefined) return <p role="status">Loading your portfolio…</p>;
   return <DashboardContent portfolio={portfolio} userId={userId} onChange={setPortfolio} />;
+}
+
+export function LoadError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div role="alert" className="flex flex-col items-start gap-3 text-red-700 dark:text-red-400">
+      <p>We couldn&apos;t load your portfolio. Check your connection and try again.</p>
+      <button type="button" className="btn-primary" onClick={onRetry}>
+        Try again
+      </button>
+    </div>
+  );
+}
+
+const STEPS = ["Sign in", "Upload", "Review", "Customise", "Publish"] as const;
+
+function currentStep(portfolio: Portfolio | null): (typeof STEPS)[number] {
+  if (!portfolio?.cv) return "Upload";
+  return portfolio.status === "published" ? "Publish" : "Review";
+}
+
+export function ProgressSteps({ portfolio }: { portfolio: Portfolio | null }) {
+  const current = STEPS.indexOf(currentStep(portfolio));
+  return (
+    <ol aria-label="Progress" className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+      {STEPS.map((step, index) => (
+        <li
+          key={step}
+          aria-current={index === current ? "step" : undefined}
+          className={index === current ? "font-semibold text-[var(--accent)]" : "text-[var(--muted)]"}
+        >
+          {index + 1}. {step}
+          {index < current && <span className="sr-only"> (done)</span>}
+        </li>
+      ))}
+    </ol>
+  );
 }
 
 export function DashboardContent({
@@ -73,6 +121,7 @@ export function DashboardContent({
 }) {
   return (
     <div className="flex flex-col gap-6">
+      <ProgressSteps portfolio={portfolio} />
       {portfolio ? (
         <div className="rounded-2xl border border-black/[.08] bg-white p-6 dark:border-white/[.145] dark:bg-zinc-950">
           <h2 className="font-medium text-black dark:text-zinc-50">{portfolio.title}</h2>
@@ -81,7 +130,7 @@ export function DashboardContent({
           </p>
         </div>
       ) : (
-        <p className="text-lg font-medium text-black dark:text-zinc-50">Nothing saved yet</p>
+        <p className="text-lg font-medium text-black dark:text-zinc-50">Nothing saved yet. Upload your CV below to begin.</p>
       )}
       {portfolio?.cv && <PublishPanel userId={userId} portfolio={portfolio} onChange={onChange} />}
       <PersonalizePanel userId={userId} portfolio={portfolio} onChange={onChange} />
@@ -132,7 +181,7 @@ export function RemoveCvPrompt({
         <button
           type="button"
           autoFocus
-          className="flex h-11 items-center justify-center rounded-full border border-black/[.12] px-5 text-sm font-medium text-black dark:border-white/[.18] dark:text-zinc-50"
+          className="btn-secondary"
           disabled={busy}
           onClick={onCancel}
         >
@@ -246,8 +295,7 @@ export function PublishPanel({
     }
   }
 
-  const buttonClassName =
-    "flex h-10 items-center justify-center rounded-full bg-foreground px-5 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-60 dark:hover:bg-[#ccc]";
+  const buttonClassName = "btn-primary";
 
   return (
     <div className="rounded-2xl border border-black/[.08] bg-white p-6 dark:border-white/[.145] dark:bg-zinc-950">
@@ -342,7 +390,7 @@ function CvUpload({
   return (
     <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-black/[.12] py-10 text-center dark:border-white/[.18]">
       <p className="text-sm text-zinc-600 dark:text-zinc-400">PDF or DOCX, up to 5 MB</p>
-      <label className="flex h-11 cursor-pointer items-center justify-center rounded-full bg-foreground px-6 font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]">
+      <label className="btn-primary">
         {busy ? "Reading your CV…" : "Upload your CV"}
         <input
           type="file"
@@ -395,8 +443,11 @@ export function PersonalizePanel({
       return;
     }
     setMessage(null);
-    const dataUrl = await readFileAsDataUrl(file);
-    save({ photoDataUrl: dataUrl });
+    try {
+      save({ photoDataUrl: await readFileAsDataUrl(file) });
+    } catch {
+      setMessage("We couldn't read that photo. Please try another image.");
+    }
   }
 
   return (
