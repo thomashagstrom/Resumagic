@@ -154,6 +154,52 @@ describe("the user can add or delete an experience or education entry", () => {
   });
 });
 
+describe("the hero shows a photo or, when there is none, a monogram from the user's initials", () => {
+  it("shows a monogram built from the CV name's initials when no photo is uploaded", () => {
+    const html = renderToStaticMarkup(
+      <DashboardContent portfolio={{ title: "My CV", lastSavedAt: "2026-10-20", status: "draft", cv }} />,
+    );
+
+    expect(html).toContain("Monogram A");
+    expect(html).not.toContain("<img");
+  });
+
+  it("shows the uploaded photo instead of a monogram once one is saved", () => {
+    const html = renderToStaticMarkup(
+      <DashboardContent
+        portfolio={{
+          title: "My CV",
+          lastSavedAt: "2026-10-20",
+          status: "draft",
+          cv,
+          photoDataUrl: "data:image/png;base64,abc",
+        }}
+      />,
+    );
+
+    expect(html).toContain('src="data:image/png;base64,abc"');
+    expect(html).not.toContain("Monogram");
+  });
+});
+
+describe("picking an accent colour updates the preview immediately", () => {
+  it("renders the accent swatches as a radio group with the current colour checked", () => {
+    const html = renderToStaticMarkup(
+      <DashboardContent portfolio={{ title: "My CV", lastSavedAt: "2026-10-20", status: "draft", cv, accentColor: "#1D4ED8" }} />,
+    );
+
+    expect(html).toContain('aria-label="Accent colour #1D4ED8" class="flex h-8 w-8 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2" style="background-color:#1D4ED8;box-shadow:0 0 0 2px white, 0 0 0 4px #1D4ED8"');
+  });
+
+  it("uses the chosen accent colour for the monogram background", () => {
+    const html = renderToStaticMarkup(
+      <DashboardContent portfolio={{ title: "My CV", lastSavedAt: "2026-10-20", status: "draft", cv, accentColor: "#1D4ED8" }} />,
+    );
+
+    expect(html).toContain('aria-label="Monogram A" class="flex h-24 w-24 items-center justify-center rounded-full text-3xl font-semibold text-white" style="background-color:#1D4ED8"');
+  });
+});
+
 describe("edits are saved to the draft and appear in the preview without a manual save step", () => {
   it("updates the preview and saves the draft as soon as a field changes", () => {
     const onPortfolioChange = vi.fn();

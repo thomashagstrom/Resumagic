@@ -42,6 +42,19 @@ describe("saved portfolio data is tied to the Firebase uid", () => {
     expect((await getPortfolioForUser("user-a"))?.cv).toEqual(cv);
   });
 
+  it("keeps the photo and accent colour after a reload, unchanged", async () => {
+    await savePortfolioForUser("user-a", {
+      ...portfolio,
+      photoDataUrl: "data:image/png;base64,abc",
+      accentColor: "#1D4ED8",
+    });
+
+    const reloaded = await getPortfolioForUser("user-a");
+
+    expect(reloaded?.photoDataUrl).toBe("data:image/png;base64,abc");
+    expect(reloaded?.accentColor).toBe("#1D4ED8");
+  });
+
   it("returns no portfolio for a user who has never saved one", async () => {
     expect(await getPortfolioForUser("user-new")).toBeNull();
   });

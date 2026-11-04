@@ -17,6 +17,7 @@ import {
   type CvDraft,
 } from "@/lib/cv-extract";
 import { getPortfolioForUser, savePortfolioForUser, type Portfolio } from "@/lib/portfolio-store";
+import { ACCENT_COLORS, initialsFor, validatePhotoFile } from "@/lib/personalize";
 
 export default function DashboardPage() {
   return (
@@ -75,6 +76,7 @@ export function DashboardContent({
       ) : (
         <p className="text-lg font-medium text-black dark:text-zinc-50">Nothing saved yet</p>
       )}
+      <PersonalizePanel userId={userId} portfolio={portfolio} onChange={onChange} />
       <CvUpload userId={userId} portfolio={portfolio} onChange={onChange} />
       {portfolio?.cv && (
         <CvSections
@@ -161,6 +163,138 @@ function CvUpload({
       </p>
     </div>
   );
+}
+
+export function PersonalizePanel({
+  userId,
+  portfolio,
+  onChange,
+}: {
+  userId?: string;
+  portfolio: Portfolio | null;
+  onChange?: (portfolio: Portfolio) => void;
+}) {
+  const [message, setMessage] = useState<string | null>(null);
+  const accentColor = portfolio?.accentColor ?? ACCENT_COLORS[0];
+  const initials = initialsFor(portfolio?.cv?.name ?? "");
+
+  function save(patch: Partial<Pick<Portfolio, "photoDataUrl" | "accentColor">>) {
+    const next: Portfolio = {
+      title: portfolio?.title ?? "My CV",
+      lastSavedAt: new Date().toISOString().slice(0, 10),
+      status: portfolio?.status ?? "draft",
+      ...portfolio,
+      ...patch,
+    };
+    onChange?.(next);
+    if (userId) void savePortfolioForUser(userId, next);
+  }
+
+  async function handlePhoto(file: File | undefined) {
+    if (!file) return;
+    const problem = validatePhotoFile(file);
+    if (problem) {
+      setMessage(problem);
+      return;
+    }
+    setMessage(null);
+    const dataUrl = await readFileAsDataUrl(file);
+    save({ photoDataUrl: dataUrl });
+  }
+
+  return (
+    <div className="rounded-2xl border border-black/[.08] bg-white p-6 dark:border-white/[.145] dark:bg-zinc-950">
+      <h3 className="font-medium text-black dark:text-zinc-50">Personalise your portfolio</h3>
+      <div className="mt-4 flex flex-col gap-6 sm:flex-row sm:items-start">
+        <div className="flex flex-col items-center gap-2">
+          <Avatar photoDataUrl={portfolio?.photoDataUrl} initials={initials} accentColor={accentColor} />
+          <label className="cursor-pointer text-sm font-medium text-black underline dark:text-zinc-50">
+            {portfolio?.photoDataUrl ? "Replace photo" : "Add photo"}
+            <input
+              type="file"
+              className="sr-only"
+              accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+              onChange={(event) => {
+                void handlePhoto(event.target.files?.[0]);
+                event.target.value = "";
+              }}
+            />
+          </label>
+          {portfolio?.photoDataUrl && (
+            <button
+              type="button"
+              className="text-sm text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50"
+              onClick={() => save({ photoDataUrl: undefined })}
+            >
+              Remove photo
+            </button>
+          )}
+          <p role="status" className="min-h-5 px-4 text-center text-sm text-red-700 dark:text-red-400">
+            {message}
+          </p>
+        </div>
+        <div className="flex-1">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Accent colour</p>
+          <div role="radiogroup" aria-label="Accent colour" className="mt-2 flex flex-wrap gap-3">
+            {ACCENT_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                role="radio"
+                aria-checked={accentColor === color}
+                aria-label={`Accent colour ${color}`}
+                className="flex h-8 w-8 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                style={{
+                  backgroundColor: color,
+                  boxShadow: accentColor === color ? `0 0 0 2px white, 0 0 0 4px ${color}` : undefined,
+                }}
+                onClick={() => save({ accentColor: color })}
+              >
+                {accentColor === color && (
+                  <span aria-hidden className="text-xs font-bold text-white">
+                    ✓
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Avatar({
+  photoDataUrl,
+  initials,
+  accentColor,
+}: {
+  photoDataUrl?: string;
+  initials: string;
+  accentColor: string;
+}) {
+  if (photoDataUrl) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={photoDataUrl} alt="Your profile photo" className="h-24 w-24 rounded-full object-cover" />;
+  }
+  return (
+    <div
+      aria-label={`Monogram ${initials}`}
+      className="flex h-24 w-24 items-center justify-center rounded-full text-3xl font-semibold text-white"
+      style={{ backgroundColor: accentColor }}
+    >
+      {initials}
+    </div>
+  );
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error as DOMException);
+    reader.readAsDataURL(file);
+  });
 }
 
 const fieldClassName =
