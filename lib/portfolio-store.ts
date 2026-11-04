@@ -32,7 +32,8 @@ const RESERVED_SLUGS = ["dashboard", "signin", "api"];
 export async function getPortfolioForUser(userId: string): Promise<Portfolio | null> {
   const snapshot = await getDoc(doc(getFirebase().db, COLLECTION, userId));
   if (!snapshot.exists()) return null;
-  const { uid: _uid, ...portfolio } = snapshot.data() as Portfolio & { uid?: string };
+  const portfolio = { ...(snapshot.data() as Portfolio & { uid?: string }) };
+  delete portfolio.uid;
   return portfolio as Portfolio;
 }
 
@@ -80,8 +81,8 @@ export async function publishPortfolio(userId: string, portfolio: Portfolio): Pr
 // Takes the public page offline and returns the saved portfolio (a draft again).
 export async function unpublishPortfolio(userId: string, portfolio: Portfolio): Promise<Portfolio> {
   if (portfolio.slug) await deleteDoc(doc(getFirebase().db, PUBLISHED, portfolio.slug));
-  const { slug: _slug, ...rest } = portfolio;
-  const next: Portfolio = { ...rest, status: "draft" };
+  const next: Portfolio = { ...portfolio, status: "draft" };
+  delete next.slug;
   await savePortfolioForUser(userId, next);
   return next;
 }
@@ -89,6 +90,7 @@ export async function unpublishPortfolio(userId: string, portfolio: Portfolio): 
 export async function getPublishedPortfolio(slug: string): Promise<PublishedPortfolio | null> {
   const snapshot = await getDoc(doc(getFirebase().db, PUBLISHED, slug));
   if (!snapshot.exists()) return null;
-  const { uid: _uid, ...page } = snapshot.data() as PublishedPortfolio & { uid?: string };
+  const page = { ...(snapshot.data() as PublishedPortfolio & { uid?: string }) };
+  delete page.uid;
   return page;
 }

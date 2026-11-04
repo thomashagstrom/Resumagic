@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import AuthGate from "@/components/AuthGate";
 import {
   addListEntry,
@@ -114,13 +114,13 @@ export function PublishPanel({
 }) {
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [origin, setOrigin] = useState("");
+  const origin = useSyncExternalStore(
+    () => () => {},
+    () => window.location.origin,
+    () => "",
+  );
   const published = portfolio.status === "published" && !!portfolio.slug;
   const link = published ? `${origin}/${portfolio.slug}` : "";
-
-  useEffect(() => {
-    setOrigin(window.location.origin);
-  }, []);
 
   async function run(action: typeof publishPortfolio, failure: string) {
     if (!userId) return;

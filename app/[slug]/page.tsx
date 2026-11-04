@@ -1,11 +1,19 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { initialsFor, ACCENT_COLORS } from "@/lib/personalize";
 import { getPublishedPortfolio, type PublishedPortfolio } from "@/lib/portfolio-store";
 
 export default function PublicPortfolioPage() {
+  return (
+    <Suspense fallback={<p className="p-6 text-black dark:text-zinc-50">Loading…</p>}>
+      <PublicPortfolio />
+    </Suspense>
+  );
+}
+
+function PublicPortfolio() {
   const { slug } = useParams<{ slug: string }>();
   const [page, setPage] = useState<PublishedPortfolio | null | undefined>(undefined);
 
