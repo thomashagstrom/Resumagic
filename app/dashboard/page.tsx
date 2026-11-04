@@ -19,6 +19,7 @@ import {
 import {
   getPortfolioForUser,
   publishPortfolio,
+  removeCv,
   savePortfolioForUser,
   unpublishPortfolio,
   type Portfolio,
@@ -85,6 +86,7 @@ export function DashboardContent({
       {portfolio?.cv && <PublishPanel userId={userId} portfolio={portfolio} onChange={onChange} />}
       <PersonalizePanel userId={userId} portfolio={portfolio} onChange={onChange} />
       <CvUpload userId={userId} portfolio={portfolio} onChange={onChange} />
+      {portfolio?.cv && <RemoveCvControl userId={userId} portfolio={portfolio} onChange={onChange} />}
       {portfolio?.cv && (
         <CvSections
           cv={portfolio.cv}
@@ -99,6 +101,106 @@ export function DashboardContent({
           }}
         />
       )}
+    </div>
+  );
+}
+
+export function RemoveCvPrompt({
+  busy,
+  message,
+  onCancel,
+  onRemove,
+}: {
+  busy: boolean;
+  message: string | null;
+  onCancel: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div
+      role="alertdialog"
+      aria-labelledby="remove-cv-title"
+      className="rounded-2xl border border-red-700 bg-white p-6 dark:border-red-400 dark:bg-zinc-950"
+    >
+      <h3 id="remove-cv-title" className="font-medium text-black dark:text-zinc-50">
+        Remove your CV?
+      </h3>
+      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+        This deletes your CV and your edits. A published portfolio goes offline.
+      </p>
+      <div className="mt-3 flex gap-3">
+        <button
+          type="button"
+          autoFocus
+          className="flex h-11 items-center justify-center rounded-full border border-black/[.12] px-5 text-sm font-medium text-black dark:border-white/[.18] dark:text-zinc-50"
+          disabled={busy}
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="flex h-11 items-center justify-center rounded-full bg-red-700 px-5 text-sm font-medium text-white disabled:opacity-60"
+          disabled={busy}
+          onClick={onRemove}
+        >
+          Remove
+        </button>
+      </div>
+      <p role="status" className="mt-2 min-h-5 text-sm text-red-700 dark:text-red-400">
+        {message}
+      </p>
+    </div>
+  );
+}
+
+function RemoveCvControl({
+  userId,
+  portfolio,
+  onChange,
+}: {
+  userId?: string;
+  portfolio: Portfolio;
+  onChange?: (portfolio: Portfolio) => void;
+}) {
+  const [asking, setAsking] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function remove() {
+    if (!userId) return;
+    setMessage(null);
+    setBusy(true);
+    try {
+      onChange?.(await removeCv(userId, portfolio));
+    } catch {
+      setMessage("We couldn't remove your CV. Please try again.");
+      setBusy(false);
+    }
+  }
+
+  if (asking) {
+    return (
+      <RemoveCvPrompt
+        busy={busy}
+        message={message}
+        onCancel={() => {
+          setAsking(false);
+          setMessage(null);
+        }}
+        onRemove={() => void remove()}
+      />
+    );
+  }
+  return (
+    <div>
+      <button
+        type="button"
+        className="flex h-11 items-center justify-center rounded-full border border-red-700 px-5 text-sm font-medium text-red-700 dark:border-red-400 dark:text-red-400"
+        onClick={() => setAsking(true)}
+      >
+        Remove CV
+      </button>
     </div>
   );
 }
