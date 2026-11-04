@@ -11,6 +11,8 @@ const savePortfolioForUser = vi.fn(async (userId: string, portfolio: unknown) =>
 vi.mock("@/lib/portfolio-store", () => ({
   getPortfolioForUser: vi.fn(async () => null),
   savePortfolioForUser: (userId: string, portfolio: unknown) => savePortfolioForUser(userId, portfolio),
+  publishPortfolio: vi.fn(),
+  unpublishPortfolio: vi.fn(),
 }));
 
 import DashboardPage, { CvSections, DashboardContent } from "./page";
@@ -47,6 +49,36 @@ describe("signed-out visitors to the dashboard are asked to sign in", () => {
     expect(html).toContain("Continue with Google");
     expect(html).not.toContain("Nothing saved yet");
     expect(html).not.toContain("Loading");
+  });
+});
+
+describe("publishing from the dashboard", () => {
+  const cv = { name: "Jane Doe", headline: "Engineer", experience: ["A"], education: [], skills: [] };
+  const base = { title: "My CV", lastSavedAt: "2026-10-20", cv } as const;
+
+  it("shows a Publish button and no link before the portfolio is published", () => {
+    const html = renderToStaticMarkup(<DashboardContent userId="u1" portfolio={{ ...base, status: "draft" }} />);
+
+    expect(html).toContain(">Publish<");
+    expect(html).not.toContain("Copy link");
+    expect(html).not.toContain("Unpublish");
+  });
+
+  it("shows the link with Copy link, Republish and Unpublish once published", () => {
+    const html = renderToStaticMarkup(
+      <DashboardContent userId="u1" portfolio={{ ...base, status: "published", slug: "jane-doe" }} />,
+    );
+
+    expect(html).toContain("Copy link");
+    expect(html).toContain("Republish");
+    expect(html).toContain("Unpublish");
+    expect(html).not.toContain(">Publish<");
+  });
+
+  it("offers no Publish button when there is no CV yet", () => {
+    const html = renderToStaticMarkup(<DashboardContent userId="u1" portfolio={null} />);
+
+    expect(html).not.toContain("Share your portfolio");
   });
 });
 

@@ -9,12 +9,21 @@ vi.mock("firebase/firestore", () => ({
     exists: () => docs.has(path),
     data: () => docs.get(path),
   }),
+  deleteDoc: async (path: string) => {
+    docs.delete(path);
+  },
   setDoc: async (path: string, data: Record<string, unknown>) => {
     docs.set(path, data);
   },
 }));
 
-import { getPortfolioForUser, savePortfolioForUser } from "./portfolio-store";
+import {
+  getPortfolioForUser,
+  getPublishedPortfolio,
+  publishPortfolio,
+  savePortfolioForUser,
+  unpublishPortfolio,
+} from "./portfolio-store";
 
 beforeEach(() => {
   docs.clear();
@@ -63,5 +72,63 @@ describe("saved portfolio data is tied to the Firebase uid", () => {
     await savePortfolioForUser("user-a", portfolio);
 
     expect(await getPortfolioForUser("user-b")).toBeNull();
+  });
+});
+
+describe("publishing a portfolio to a shareable link", () => {
+  const cv = { name: "Jane Doe", headline: "Engineer", experience: ["A"], education: [], skills: [] };
+  const withCv = { ...portfolio, cv };
+
+  it("publishes 'Jane Doe' at 'jane-doe' and marks the portfolio published", async () => {
+    const saved = await publishPortfolio("user-a", withCv);
+
+    expect(saved.slug).toBe("jane-doe");
+    expect(saved.status).toBe("published");
+    expect(docs.get("published/jane-doe")).toMatchObject({ uid: "user-a", cv });
+    expect(await getPublishedPortfolio("jane-doe")).toMatchObject({ cv });
+  });
+
+  it("gives a second 'Jane Doe' a unique suffix instead of overwriting the first", async () => {
+    await publishPortfolio("user-a", withCv);
+    const second = await publishPortfolio("user-b", withCv);
+
+    expect(second.slug).toBe("jane-doe-2");
+    expect(docs.get("published/jane-doe")).toMatchObject({ uid: "user-a" });
+  });
+
+  it("keeps the same link when republishing and shows the latest edits", async () => {
+    const first = await publishPortfolio("user-a", withCv);
+    await publishPortfolio("user-a", { ...first, cv: { ...cv, headline: "Lead" } });
+
+    expect(docs.get("published/jane-doe")).toMatchObject({ cv: { headline: "Lead" } });
+    expect(docs.has("published/jane-doe-2")).toBe(false);
+  });
+
+  it("does not show edits made after publishing until the person republishes", async () => {
+    const first = await publishPortfolio("user-a", withCv);
+    await savePortfolioForUser("user-a", { ...first, cv: { ...cv, headline: "Lead" } });
+
+    expect((await getPublishedPortfolio("jane-doe"))?.cv.headline).toBe("Engineer");
+  });
+
+  it("unpublishing removes the public page and returns the portfolio to draft", async () => {
+    const first = await publishPortfolio("user-a", withCv);
+    const draft = await unpublishPortfolio("user-a", first);
+
+    expect(await getPublishedPortfolio("jane-doe")).toBeNull();
+    expect(draft.status).toBe("draft");
+    expect(draft.slug).toBeUndefined();
+  });
+
+  it("never gives a link that would shadow the dashboard page", async () => {
+    const saved = await publishPortfolio("user-a", { ...withCv, cv: { ...cv, name: "Dashboard" } });
+
+    expect(saved.slug).toBe("dashboard-2");
+  });
+
+  it("does not expose the owner's uid on the public page", async () => {
+    await publishPortfolio("user-a", withCv);
+
+    expect(await getPublishedPortfolio("jane-doe")).not.toHaveProperty("uid");
   });
 });

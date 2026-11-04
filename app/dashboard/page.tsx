@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import AuthGate from "@/components/AuthGate";
 import {
   addListEntry,
@@ -16,7 +16,13 @@ import {
   validateCvFile,
   type CvDraft,
 } from "@/lib/cv-extract";
-import { getPortfolioForUser, savePortfolioForUser, type Portfolio } from "@/lib/portfolio-store";
+import {
+  getPortfolioForUser,
+  publishPortfolio,
+  savePortfolioForUser,
+  unpublishPortfolio,
+  type Portfolio,
+} from "@/lib/portfolio-store";
 import { ACCENT_COLORS, initialsFor, validatePhotoFile } from "@/lib/personalize";
 
 export default function DashboardPage() {
@@ -76,6 +82,7 @@ export function DashboardContent({
       ) : (
         <p className="text-lg font-medium text-black dark:text-zinc-50">Nothing saved yet</p>
       )}
+      {portfolio?.cv && <PublishPanel userId={userId} portfolio={portfolio} onChange={onChange} />}
       <PersonalizePanel userId={userId} portfolio={portfolio} onChange={onChange} />
       <CvUpload userId={userId} portfolio={portfolio} onChange={onChange} />
       {portfolio?.cv && (
@@ -92,6 +99,93 @@ export function DashboardContent({
           }}
         />
       )}
+    </div>
+  );
+}
+
+export function PublishPanel({
+  userId,
+  portfolio,
+  onChange,
+}: {
+  userId?: string;
+  portfolio: Portfolio;
+  onChange?: (portfolio: Portfolio) => void;
+}) {
+  const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const origin = useSyncExternalStore(
+    () => () => {},
+    () => window.location.origin,
+    () => "",
+  );
+  const published = portfolio.status === "published" && !!portfolio.slug;
+  const link = published ? `${origin}/${portfolio.slug}` : "";
+
+  async function run(action: typeof publishPortfolio, failure: string) {
+    if (!userId) return;
+    setMessage(null);
+    setBusy(true);
+    try {
+      onChange?.(await action(userId, portfolio));
+    } catch {
+      setMessage(failure);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(link);
+      setMessage("Link copied.");
+    } catch {
+      setMessage("We couldn't copy the link. Please copy it from the box.");
+    }
+  }
+
+  const buttonClassName =
+    "flex h-10 items-center justify-center rounded-full bg-foreground px-5 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-60 dark:hover:bg-[#ccc]";
+
+  return (
+    <div className="rounded-2xl border border-black/[.08] bg-white p-6 dark:border-white/[.145] dark:bg-zinc-950">
+      <h3 className="font-medium text-black dark:text-zinc-50">Share your portfolio</h3>
+      {published && (
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <input
+            readOnly
+            aria-label="Portfolio link"
+            value={link}
+            className="w-full rounded-lg border border-black/[.12] bg-transparent p-2 text-sm text-black dark:border-white/[.18] dark:text-zinc-50"
+          />
+          <button type="button" className={buttonClassName} onClick={() => void copyLink()}>
+            Copy link
+          </button>
+        </div>
+      )}
+      <div className="mt-3 flex flex-wrap items-center gap-4">
+        <button
+          type="button"
+          className={buttonClassName}
+          disabled={busy}
+          onClick={() => void run(publishPortfolio, "We couldn't publish your portfolio. Please try again.")}
+        >
+          {published ? "Republish" : "Publish"}
+        </button>
+        {published && (
+          <button
+            type="button"
+            className="text-sm font-medium text-black underline disabled:opacity-60 dark:text-zinc-50"
+            disabled={busy}
+            onClick={() => void run(unpublishPortfolio, "We couldn't unpublish your portfolio. Please try again.")}
+          >
+            Unpublish
+          </button>
+        )}
+      </div>
+      <p role="status" className="mt-2 min-h-5 text-sm text-zinc-600 dark:text-zinc-400">
+        {message}
+      </p>
     </div>
   );
 }
@@ -129,6 +223,7 @@ function CvUpload({
       title: portfolio?.title ?? "My CV",
       lastSavedAt: new Date().toISOString().slice(0, 10),
       status: portfolio?.status ?? "draft",
+      ...(portfolio?.slug ? { slug: portfolio.slug } : {}),
       cv,
     };
     try {
