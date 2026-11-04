@@ -7,6 +7,8 @@ export type Portfolio = {
   lastSavedAt: string;
   status: "draft" | "published";
   cv?: CvDraft;
+  photoDataUrl?: string;
+  accentColor?: string;
 };
 
 // One document per person at notes/{uid}, carrying a `uid` field so that
@@ -16,8 +18,8 @@ const COLLECTION = "notes";
 export async function getPortfolioForUser(userId: string): Promise<Portfolio | null> {
   const snapshot = await getDoc(doc(getFirebase().db, COLLECTION, userId));
   if (!snapshot.exists()) return null;
-  const { title, lastSavedAt, status, cv } = snapshot.data() as Portfolio;
-  return cv ? { title, lastSavedAt, status, cv } : { title, lastSavedAt, status };
+  const { uid: _uid, ...portfolio } = snapshot.data() as Portfolio & { uid?: string };
+  return portfolio as Portfolio;
 }
 
 export async function savePortfolioForUser(userId: string, portfolio: Portfolio): Promise<void> {
