@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("next/navigation", () => ({ useParams: () => ({ slug: "jane-doe" }) }));
 vi.mock("@/lib/portfolio-store", () => ({ getPublishedPortfolio: vi.fn(async () => null) }));
 
-import { PortfolioView } from "./page";
+import { PortfolioView, prefersReducedMotion } from "./page";
 
 const cv = {
   name: "Jane Doe",
@@ -48,5 +48,32 @@ describe("the public portfolio page", () => {
     const html = renderToStaticMarkup(<PortfolioView page={{ slug: "jane-doe", cv: { ...cv, experience: [] } }} />);
 
     expect(html).not.toContain("Latest role");
+  });
+
+  it("renders name, tagline, photo and every CV section visible, with hooks for the entrance and reveal", () => {
+    const html = renderToStaticMarkup(
+      <PortfolioView
+        page={{ slug: "jane-doe", cv, accentColor: "#1D4ED8", photoDataUrl: "data:image/png;base64,abc" }}
+      />,
+    );
+
+    expect(html).not.toMatch(/opacity\s*:\s*0/);
+    expect(html).not.toContain("data-motion");
+    expect(html.match(/data-enter/g)).toHaveLength(3);
+    expect(html.match(/data-reveal/g)).toHaveLength(4);
+    expect(html).toContain("data-photo");
+    expect(html).toMatch(/--glow:#1D4ED8/i);
+    expect(html).toContain("Product engineer");
+    expect(html).toContain("Staff Engineer, Acme");
+    expect(html).toContain("BSc Computing");
+    expect(html).toContain("TypeScript");
+  });
+
+  it("detects the visitor's reduced-motion setting so no animation is applied", () => {
+    vi.stubGlobal("window", { matchMedia: () => ({ matches: true }) });
+    expect(prefersReducedMotion()).toBe(true);
+    vi.stubGlobal("window", { matchMedia: () => ({ matches: false }) });
+    expect(prefersReducedMotion()).toBe(false);
+    vi.unstubAllGlobals();
   });
 });

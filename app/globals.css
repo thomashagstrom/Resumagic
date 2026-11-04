@@ -50,6 +50,36 @@ a {
   top: 0.5rem;
 }
 
+/* Portfolio motion: only applies once script sets data-motion="on"; without it everything is plain and visible. */
+@keyframes enter-up {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+}
+
+[data-motion="on"] [data-enter] {
+  animation: enter-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 150ms);
+}
+
+[data-motion="on"] [data-reveal] {
+  transition:
+    opacity 0.6s ease-out,
+    transform 0.6s ease-out;
+}
+
+[data-motion="on"] [data-reveal]:not([data-revealed]) {
+  opacity: 0;
+  transform: translateY(1.5rem);
+}
+
+[data-motion="on"] [data-photo] > * {
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+  transform: perspective(600px) rotateX(calc(var(--tilt-y, 0) * -8deg)) rotateY(calc(var(--tilt-x, 0) * 8deg));
+  box-shadow: calc(var(--tilt-x, 0) * -12px) calc(var(--tilt-y, 0) * -12px) 28px var(--glow);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
