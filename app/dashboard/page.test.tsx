@@ -16,7 +16,7 @@ vi.mock("@/lib/portfolio-store", () => ({
   removeCv: vi.fn(),
 }));
 
-import DashboardPage, { CvSections, DashboardContent, RemoveCvPrompt } from "./page";
+import DashboardPage, { CvSections, DashboardContent, LoadError, RemoveCvPrompt } from "./page";
 import type { CvDraft } from "@/lib/cv-extract";
 
 type ElementNode = { type: unknown; props: Record<string, unknown> };
@@ -139,6 +139,33 @@ const cv = {
   education: ["University of London"],
   skills: ["TypeScript"],
 };
+
+describe("the dashboard is one guided flow with a progress indicator", () => {
+  const published = { title: "t", lastSavedAt: "2026-01-01", status: "published" as const, slug: "ada", cv };
+
+  it("names every step and marks Upload as current when nothing is saved", () => {
+    const html = renderToStaticMarkup(<DashboardContent portfolio={null} />);
+    for (const step of ["Sign in", "Upload", "Review", "Customise", "Publish"]) expect(html).toContain(step);
+    expect(html).toMatch(/aria-current="step"[^>]*>2\. Upload/);
+  });
+
+  it("marks Review as current once a CV is saved and Publish once published", () => {
+    const draft = { ...published, status: "draft" as const };
+    expect(renderToStaticMarkup(<DashboardContent portfolio={draft} />)).toMatch(
+      /aria-current="step"[^>]*>3\. Review/,
+    );
+    const html = renderToStaticMarkup(<DashboardContent portfolio={published} />);
+    expect(html).toMatch(/aria-current="step"[^>]*>5\. Publish/);
+    expect(html).not.toMatch(/aria-current="step"[^>]*>2\. Upload/);
+  });
+
+  it("shows an error with a retry action when the load fails", () => {
+    const html = renderToStaticMarkup(<LoadError onRetry={() => {}} />);
+    expect(html).toContain('role="alert"');
+    expect(html).toContain("Try again");
+    expect(html).not.toContain("Nothing saved yet");
+  });
+});
 
 describe("each extracted section can be edited inline", () => {
   it("renders an editable input carrying each section's current value", () => {
